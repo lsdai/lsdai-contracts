@@ -1,0 +1,11 @@
+# Build files
+artifacts
+build
+dist
+cache
+typechain-types
+deployments
+
+# Node dependencies and config files
+lib
+node_modules

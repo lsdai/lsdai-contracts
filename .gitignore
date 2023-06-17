@@ -1,0 +1,40 @@
+# for verify
+args.js
+
+.env
+
+# Foundry
+cache/
+artifacts/
+coverage*
+typechain/
+typechain-types/
+
+# JS
+node_modules/
+
+# Hardhat files
+cache_hardhat/
+artifacts/
+
+# Hardhat plugin files
+typechain-types/
+
+# Merkle generator
+scripts/generator/*json
+scripts/generator/*log
+
+*.go
+abi
+build
+scripts/xbribes
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# misc
+.DS_Store
+*.pem
