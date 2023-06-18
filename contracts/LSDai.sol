@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
+import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
 // Custom Ownable logic from OZ
-import {Ownable} from "./Ownable.sol";
+import {Ownable} from './Ownable.sol';
 
 // Interfaces
-import {ILSDai} from "./interfaces/ILSDai.sol";
+import {ILSDai} from './interfaces/ILSDai.sol';
 
 // DSR helpers
-import {RMath} from "./libraries/RMath.sol";
-import {IDai} from "./interfaces/IDai.sol";
-import {IPot} from "./interfaces/IPot.sol";
-import {IJoin} from "./interfaces/IJoin.sol";
-import {IVat} from "./interfaces/IVat.sol";
+import {RMath} from './libraries/RMath.sol';
+import {IDai} from './interfaces/IDai.sol';
+import {IPot} from './interfaces/IPot.sol';
+import {IJoin} from './interfaces/IJoin.sol';
+import {IVat} from './interfaces/IVat.sol';
 
 /**
  * @title LSDAI
@@ -22,7 +22,8 @@ import {IVat} from "./interfaces/IVat.sol";
  */
 contract LSDai is Ownable, ILSDai {
   error LSDai__AlreadyInitialized();
-  error LSDai__DepositLimitLowerThanTotalPooledDai();
+  error LSDai__DepositCapLowerThanTotalPooledDai();
+  error LSDai__DepositCap();
   error LSDai__WithdrawalFeeLow();
   error LSDai__InterestFeeLow();
   error LSDai__TransferToZeroAddress();
@@ -144,8 +145,8 @@ contract LSDai is Ownable, ILSDai {
     feeRecipient = msg.sender;
 
     // Set ERC20 name and symbol
-    name = "Liquid Savings DAI";
-    symbol = "LSDAI";
+    name = 'Liquid Savings DAI';
+    symbol = 'LSDAI';
 
     _initialized = true;
 
@@ -306,7 +307,7 @@ contract LSDai is Ownable, ILSDai {
   function setDepositCap(uint256 cap) public onlyOwner {
     // Must be higher than total pooled DAI
     if (cap < _getTotalPooledDai()) {
-      revert LSDai__DepositLimitLowerThanTotalPooledDai();
+      revert LSDai__DepositCapLowerThanTotalPooledDai();
     }
 
     depositCap = cap;
@@ -337,6 +338,11 @@ contract LSDai is Ownable, ILSDai {
    * @return shares amount of LSDAI minted.
    */
   function _deposit(address _to, uint256 _daiAmount) internal returns (uint256 shares) {
+    // Check if the deposit cap is reached
+    if (depositCap > 0 && _getTotalPooledDai().add(_daiAmount) > depositCap) {
+      revert LSDai__DepositCap();
+    }
+
     uint256 chi = _getMostRecentChi();
 
     // Calculate the amount of pot shares to mint
@@ -614,8 +620,8 @@ contract LSDai is Ownable, ILSDai {
    * - `spender` cannot be the zero address.
    */
   function _approve(address owner, address spender, uint256 amount) internal {
-    require(owner != address(0), "ERC20: approve from the zero address");
-    require(spender != address(0), "ERC20: approve to the zero address");
+    require(owner != address(0), 'ERC20: approve from the zero address');
+    require(spender != address(0), 'ERC20: approve to the zero address');
 
     _allowances[owner][spender] = amount;
     emit Approval(owner, spender, amount);
@@ -632,7 +638,7 @@ contract LSDai is Ownable, ILSDai {
   function _spendAllowance(address owner, address spender, uint256 amount) internal {
     uint256 currentAllowance = allowance(owner, spender);
     if (currentAllowance != type(uint256).max) {
-      require(currentAllowance >= amount, "ERC20: insufficient allowance");
+      require(currentAllowance >= amount, 'ERC20: insufficient allowance');
       unchecked {
         _approve(owner, spender, currentAllowance - amount);
       }

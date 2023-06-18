@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import {Test} from "forge-std/Test.sol";
+import {Test} from 'forge-std/Test.sol';
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
+import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
 
-import {LSDAITestBase, MAKER_POT} from "./common/LSDAITestBase.sol";
-import {LSDai} from "../contracts/LSDai.sol";
-import {IDai} from "../contracts/interfaces/IDai.sol";
+import {LSDAITestBase, MAKER_POT} from './common/LSDAITestBase.sol';
+import {LSDai} from '../contracts/LSDai.sol';
+import {IDai} from '../contracts/interfaces/IDai.sol';
 
 address constant DAI_ADDRESS = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
@@ -19,7 +19,10 @@ contract LSDaiTests is LSDAITestBase {
   event Transfer(address indexed from, address indexed to, uint256 value);
   event TransferShares(address indexed from, address indexed to, uint256 sharesValue);
   event SharesBurnt(
-    address indexed account, uint256 preRebaseTokenAmount, uint256 postRebaseTokenAmount, uint256 sharesAmount
+    address indexed account,
+    uint256 preRebaseTokenAmount,
+    uint256 postRebaseTokenAmount,
+    uint256 sharesAmount
   );
 
   LSDai lsdai;
@@ -40,6 +43,7 @@ contract LSDaiTests is LSDAITestBase {
     lsdai = new LSDai();
     // initialize LSDai
     lsdai.initialize();
+    lsdai.setDepositCap(150_000_000 ether);
   }
 
   function test_lsdaiCanBeIntializedOnce() public {
@@ -50,8 +54,8 @@ contract LSDaiTests is LSDAITestBase {
 
   function test_lsdaiIsERC20ish() public {
     // Check if the contract implements the ERC20 interface
-    assertEq(lsdai.symbol(), "LSDAI");
-    assertEq(lsdai.name(), "Liquid Savings DAI");
+    assertEq(lsdai.symbol(), 'LSDAI');
+    assertEq(lsdai.name(), 'Liquid Savings DAI');
     assertEq(lsdai.decimals(), 18);
 
     // Deposit DAI from LSD tripper
@@ -80,7 +84,8 @@ contract LSDaiTests is LSDAITestBase {
       // Check LSD Tripper balance
       assertEq(lsdai.balanceOf(lsdTripper), lsdaiTripperBalanceBeforeTransfer - balanceToTransfer);
       assertEq(
-        lsdai.sharesOf(lsdTripper), lsdai.getSharesByPooledDai(lsdaiTripperBalanceBeforeTransfer - balanceToTransfer)
+        lsdai.sharesOf(lsdTripper),
+        lsdai.getSharesByPooledDai(lsdaiTripperBalanceBeforeTransfer - balanceToTransfer)
       );
       // Check LSD Enjoyer balance
       assertEq(lsdai.balanceOf(lsdEnjoyer), balanceToTransfer);
@@ -114,8 +119,9 @@ contract LSDaiTests is LSDAITestBase {
 
     uint256 expectedTotalLSDaiSharesAfterBurn = lsdai.totalShares() - expectedSharesToBurn;
 
-    uint256 expectedPostRebaseTokenAmount =
-      expectedSharesToBurn.mul(expectedTotalLSDaiSharesAfterBurn).div(expectedTotalLSDaiSharesAfterBurn);
+    uint256 expectedPostRebaseTokenAmount = expectedSharesToBurn.mul(expectedTotalLSDaiSharesAfterBurn).div(
+      expectedTotalLSDaiSharesAfterBurn
+    );
 
     // Submit withdrawal request
     vm.prank(lsdTripper);
@@ -141,14 +147,14 @@ contract LSDaiTests is LSDAITestBase {
     assert(dai.balanceOf(lsdTripper) == 0);
     assert(lsdai.balanceOf(lsdTripper) == lsdTripperInitialDeposit); // since 1:1 ratio and we're in the same block
 
-    logLSDAIMetrics(lsdai, "at week 1");
+    logLSDAIMetrics(lsdai, 'at week 1');
 
     vm.warp(block.timestamp + 52 weeks);
 
     lsdai.rebase();
-    logLSDAIMetrics(lsdai, "at week 52");
+    logLSDAIMetrics(lsdai, 'at week 52');
 
-    logLSDaiUserMetrics(lsdai, lsdTripper, "LSD Tripper");
+    logLSDaiUserMetrics(lsdai, lsdTripper, 'LSD Tripper');
     // Withdraw DAI from LSD tripper
     withdrawDAI(lsdTripper, lsdai.balanceOf(lsdTripper));
   }
@@ -159,13 +165,13 @@ contract LSDaiTests is LSDAITestBase {
     depositDAI(lsdEnjoyer, lsdEnjoyerInitialDeposit);
     depositDAI(lsdDreamer, lsdDreamerInitialDeposit);
 
-    logLSDAIMetrics(lsdai, "at week 1");
+    logLSDAIMetrics(lsdai, 'at week 1');
 
     // Warp to 52 weeks
     vm.warp(block.timestamp + 52 weeks);
     lsdai.rebase();
 
-    logLSDAIMetrics(lsdai, "at week 52");
+    logLSDAIMetrics(lsdai, 'at week 52');
 
     // Withdraw from LSD tripper
     {
@@ -185,30 +191,30 @@ contract LSDaiTests is LSDAITestBase {
       assertTrue(
         lsdaiEnjoyerBalanceAfterWithdraw >= lsdaiEnjoyerBalanceBeforeWithdraw,
         string.concat(
-          "LSD Enjoyer should have same or more LSDai after LSD tripper withdraws. ",
-          "Expected: ",
+          'LSD Enjoyer should have same or more LSDai after LSD tripper withdraws. ',
+          'Expected: ',
           Strings.toString(lsdaiEnjoyerBalanceBeforeWithdraw),
-          " or more. Got:",
+          ' or more. Got:',
           Strings.toString(lsdaiEnjoyerBalanceAfterWithdraw)
         )
       );
       assertTrue(
         lsdaiDreamerBalanceAfterWithdraw >= lsdaiDreamerBalanceBeforeWithdraw,
         string.concat(
-          "LSD Dreamer should have same or more LSDai after LSD tripper withdraws. ",
-          "Expected: ",
+          'LSD Dreamer should have same or more LSDai after LSD tripper withdraws. ',
+          'Expected: ',
           Strings.toString(lsdaiDreamerBalanceBeforeWithdraw),
-          " or more. Got:",
+          ' or more. Got:',
           Strings.toString(lsdaiDreamerBalanceAfterWithdraw)
         )
       );
       assertTrue(
         feeRecipientBalanceAfterWithdraw >= feeRecipientBalanceBeforeWithdraw,
         string.concat(
-          "LSDai Fee Recipient should have same or more LSDai after LSD tripper withdraws. ",
-          "Expected: ",
+          'LSDai Fee Recipient should have same or more LSDai after LSD tripper withdraws. ',
+          'Expected: ',
           Strings.toString(feeRecipientBalanceBeforeWithdraw),
-          " or more. Got:",
+          ' or more. Got:',
           Strings.toString(feeRecipientBalanceAfterWithdraw)
         )
       );
@@ -230,20 +236,20 @@ contract LSDaiTests is LSDAITestBase {
       assertTrue(
         lsdaiDreamerBalanceAfterWithdraw >= lsdaiDreamerBalanceBeforeWithdraw,
         string.concat(
-          "LSD Dreamer should have same or more LSDai after LSD Enjoyer withdraws. ",
-          "Expected: ",
+          'LSD Dreamer should have same or more LSDai after LSD Enjoyer withdraws. ',
+          'Expected: ',
           Strings.toString(lsdaiDreamerBalanceBeforeWithdraw),
-          " or more. Got:",
+          ' or more. Got:',
           Strings.toString(lsdaiDreamerBalanceAfterWithdraw)
         )
       );
       assertTrue(
         feeRecipientBalanceAfterWithdraw >= feeRecipientBalanceBeforeWithdraw,
         string.concat(
-          "LSDai Fee Recipient should have same or more LSDai after LSD Enjoyer withdraws. ",
-          "Expected: ",
+          'LSDai Fee Recipient should have same or more LSDai after LSD Enjoyer withdraws. ',
+          'Expected: ',
           Strings.toString(feeRecipientBalanceBeforeWithdraw),
-          " or more. Got:",
+          ' or more. Got:',
           Strings.toString(feeRecipientBalanceAfterWithdraw)
         )
       );
@@ -259,11 +265,38 @@ contract LSDaiTests is LSDAITestBase {
 
       assertTrue(
         lsdai.balanceOf(lsdai.feeRecipient()) >= feeRecipientBalanceBeforeWithdraw,
-        "LSDai Fee Recipient should have same or more LSDai after LSD Dreamer withdraws"
+        'LSDai Fee Recipient should have same or more LSDai after LSD Dreamer withdraws'
       );
     }
 
-    logLSDAIMetrics(lsdai, "after everyone withdrew");
+    logLSDAIMetrics(lsdai, 'after everyone withdrew');
+  }
+
+  function test_depositCapEnforced() public {
+    // Set deposit cap to 100 DAI
+    lsdai.setDepositCap(100 ether);
+    assertEq(lsdai.depositCap(), 100 ether, 'Deposit cap should be 100 DAI');
+
+    uint256 currentDepositCap = lsdai.depositCap();
+    // Use the entire deposit cap by depositing the max amount
+    depositDAI(lsdTripper, currentDepositCap);
+    vm.warp(block.timestamp + 1 weeks);
+
+    // Deposit 1 more DAI than the deposit cap
+    uint256 depositAmount = currentDepositCap + 1;
+    vm.prank(lsdTripper);
+    vm.expectRevert(LSDai.LSDai__DepositCap.selector);
+    lsdai.deposit({daiAmount: depositAmount, to: lsdTripper});
+
+    // Ensure that deposit cap cannot be lowered below the current pooled DAI
+    vm.warp(block.timestamp + 1 weeks);
+    lsdai.rebase();
+    uint256 currentPooledDai = lsdai.totalSupply();
+    // Withdraw 1 DAI to make room for the next deposit
+    uint256 nextDepositCap = currentPooledDai - 1;
+    // Next deposit cannot exceed current pooled DAI
+    vm.expectRevert(LSDai.LSDai__DepositCapLowerThanTotalPooledDai.selector);
+    lsdai.setDepositCap(nextDepositCap);
   }
 
   function depositDAI(address account, uint256 daiAmount) public {
