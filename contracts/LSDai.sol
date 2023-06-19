@@ -114,11 +114,6 @@ contract LSDai is Ownable, ILSDai {
    */
   address public feeRecipient;
 
-  /**
-   * @notice The contract owner can update the fee recipient address.
-   */
-  address public _owner;
-
   ///////////////////////////
   // MakerDAO DSR Contracts //
   ///////////////////////////
@@ -138,8 +133,8 @@ contract LSDai is Ownable, ILSDai {
     // Transfer ownership to message sender
     _transferOwnership(msg.sender);
 
-    // Set initial deposit cap to 10m DAI
-    setDepositCap(10_000_000 ether);
+    // Set initial deposit cap to 1000 DAI
+    setDepositCap(1000 ether);
 
     // Set fee recipient to msg.sender
     feeRecipient = msg.sender;
