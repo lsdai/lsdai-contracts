@@ -114,11 +114,6 @@ contract LSDai is Ownable, ILSDai {
    */
   address public feeRecipient;
 
-  /**
-   * @notice The contract owner can update the fee recipient address.
-   */
-  address public _owner;
-
   ///////////////////////////
   // MakerDAO DSR Contracts //
   ///////////////////////////
