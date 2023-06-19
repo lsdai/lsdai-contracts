@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
-import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 // Custom Ownable logic from OZ
-import {Ownable} from './Ownable.sol';
+import {Ownable} from "./Ownable.sol";
 
 // Interfaces
-import {ILSDai} from './interfaces/ILSDai.sol';
+import {ILSDai} from "./interfaces/ILSDai.sol";
 
 // DSR helpers
-import {RMath} from './libraries/RMath.sol';
-import {IDai} from './interfaces/IDai.sol';
-import {IPot} from './interfaces/IPot.sol';
-import {IJoin} from './interfaces/IJoin.sol';
-import {IVat} from './interfaces/IVat.sol';
+import {RMath} from "./libraries/RMath.sol";
+import {IDai} from "./interfaces/IDai.sol";
+import {IPot} from "./interfaces/IPot.sol";
+import {IJoin} from "./interfaces/IJoin.sol";
+import {IVat} from "./interfaces/IVat.sol";
 
 /**
  * @title LSDAI
@@ -32,7 +32,7 @@ contract LSDai is Ownable, ILSDai {
   error LSDai__MintToZeroAddress();
   error LSDai__BurnFromZeroAddress();
   error LSDai__SharesAmountExceedsBalance();
-
+  error LSDai__FeeRecipientZeroAddress();
   error LSDai__RebaseOverflow(uint256 preRebaseTotalPooledDai, uint256 postRebaseTotalPooledDai);
 
   using SafeMath for uint256;
@@ -117,15 +117,22 @@ contract LSDai is Ownable, ILSDai {
   ///////////////////////////
   // MakerDAO DSR Contracts //
   ///////////////////////////
-  IVat public vat = IVat(0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B);
-  IPot public pot = IPot(0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7);
-  IJoin public daiJoin = IJoin(0x9759A6Ac90977b93B58547b4A71c78317f391A28);
-  IDai public dai = IDai(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+  IVat public immutable vat = IVat(0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B);
+  IPot public immutable pot = IPot(0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7);
+  IJoin public immutable daiJoin = IJoin(0x9759A6Ac90977b93B58547b4A71c78317f391A28);
+  IDai public immutable dai = IDai(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
   /**
-   * @dev Initialize LSDAI contract.
+   * @dev initializes the contract.
+   * @param _depositCap the DAI deposit cap.
+   * @param _interestFee the interest fee percentage in basis points (1/100 of a percent)
+   * @param _withdrawalFee the withdrawal fee percentage in basis points (1/100 of a percent)
+   * @param _feeRecipient the address of the fee recipient
    */
-  function initialize() external {
+  function initialize(uint256 _depositCap, uint256 _interestFee, uint256 _withdrawalFee, address _feeRecipient)
+    external
+    returns (bool)
+  {
     if (_initialized) {
       revert LSDai__AlreadyInitialized();
     }
@@ -133,15 +140,16 @@ contract LSDai is Ownable, ILSDai {
     // Transfer ownership to message sender
     _transferOwnership(msg.sender);
 
-    // Set initial deposit cap to 10m DAI
-    setDepositCap(10_000_000 ether);
-
-    // Set fee recipient to msg.sender
-    feeRecipient = msg.sender;
-
     // Set ERC20 name and symbol
-    name = 'Liquid Savings DAI';
-    symbol = 'LSDAI';
+    name = "Liquid Savings DAI";
+    symbol = "LSDAI";
+
+    // Set initial deposit cap to 10m DAI
+    setDepositCap(_depositCap);
+    // Set fee information
+    setFeeRecipient(_feeRecipient);
+    setWithdrawalFee(_withdrawalFee);
+    setInterestFee(_interestFee);
 
     _initialized = true;
 
@@ -149,6 +157,8 @@ contract LSDai is Ownable, ILSDai {
     vat.hope(address(daiJoin));
     vat.hope(address(pot));
     dai.approve(address(daiJoin), type(uint256).max);
+
+    return true;
   }
 
   /**
@@ -219,24 +229,42 @@ contract LSDai is Ownable, ILSDai {
    * @dev Updates the withdrawal fee. Only callable by the owner.
    * @param fee The new withdrawal fee, in basis points.
    */
-  function setWithdrawalFee(uint256 fee) external onlyOwner {
+  function setWithdrawalFee(uint256 fee) public onlyOwner {
     if (fee < 0) {
       revert LSDai__WithdrawalFeeLow();
     }
 
     withdrawalFee = fee;
+
+    emit WithdrawalFeeSet(fee);
   }
 
   /**
    * @dev Updates the interest fee. Only callable by the owner.
    * @param fee The new interest fee, in basis points.
    */
-  function setInterestFee(uint256 fee) external onlyOwner {
+  function setInterestFee(uint256 fee) public onlyOwner {
     if (fee < 0) {
       revert LSDai__InterestFeeLow();
     }
 
-    withdrawalFee = fee;
+    interestFee = fee;
+
+    emit InterestFeeSet(fee);
+  }
+
+  /**
+   * @dev Updates the fee recipient. Only callable by the owner.
+   * @param recipient The new fee recipient.
+   */
+  function setFeeRecipient(address recipient) public onlyOwner {
+    if (recipient == address(0)) {
+      revert LSDai__FeeRecipientZeroAddress();
+    }
+
+    feeRecipient = recipient;
+
+    emit FeeRecipientSet(recipient);
   }
 
   /**
@@ -615,8 +643,8 @@ contract LSDai is Ownable, ILSDai {
    * - `spender` cannot be the zero address.
    */
   function _approve(address owner, address spender, uint256 amount) internal {
-    require(owner != address(0), 'ERC20: approve from the zero address');
-    require(spender != address(0), 'ERC20: approve to the zero address');
+    require(owner != address(0), "ERC20: approve from the zero address");
+    require(spender != address(0), "ERC20: approve to the zero address");
 
     _allowances[owner][spender] = amount;
     emit Approval(owner, spender, amount);
@@ -633,7 +661,7 @@ contract LSDai is Ownable, ILSDai {
   function _spendAllowance(address owner, address spender, uint256 amount) internal {
     uint256 currentAllowance = allowance(owner, spender);
     if (currentAllowance != type(uint256).max) {
-      require(currentAllowance >= amount, 'ERC20: insufficient allowance');
+      require(currentAllowance >= amount, "ERC20: insufficient allowance");
       unchecked {
         _approve(owner, spender, currentAllowance - amount);
       }

@@ -32,16 +32,42 @@ interface ILSDai is IERC20 {
   );
 
   /**
-   * @notice sets the DAI deposit cap.
    * @dev emitted when the DAI deposit cap is set. set `setDepositCap` for more details.
    */
   event DepositCapSet(uint256 depositCap);
+
+  /**
+   * @dev emitted when the withdrawal fee is set. set `setWithdrawalFee` for more details.
+   */
+  event WithdrawalFeeSet(uint256 withdrawalFee);
+
+  /**
+   * @dev emitted when the interest fee is set. set `setInterestFee` for more details.
+   */
+  event InterestFeeSet(uint256 interestFee);
+
+  /**
+   * @dev emitted when the fee recipient is set. set `setFeeRecipient` for more details.
+   */
+  event FeeRecipientSet(address indexed recipient);
 
   /**
    * @notice The DAI deposit cap.
    * @dev can be changed by the owner of the contract.
    */
   function depositCap() external view returns (uint256);
+
+  /**
+   * @notice the fee recipient.
+   * @dev can be changed by the owner of the contract.
+   */
+  function feeRecipient() external view returns (address);
+
+  /**
+   * @dev Updates the fee recipient. Only callable by the owner.
+   * @param recipient The new fee recipient.
+   */
+  function setFeeRecipient(address recipient) external;
 
   /**
    * @notice sets the DAI deposit cap.
@@ -72,7 +98,16 @@ interface ILSDai is IERC20 {
    */
   function setWithdrawalFee(uint256 fee) external;
 
-  function initialize() external;
+  /**
+   * @dev initializes the contract.
+   * @param _depositCap the DAI deposit cap.
+   * @param _interestFee the interest fee percentage in basis points (1/100 of a percent)
+   * @param _withdrawalFee the withdrawal fee percentage in basis points (1/100 of a percent)
+   * @param _feeRecipient the address of the fee recipient
+   */
+  function initialize(uint256 _depositCap, uint256 _interestFee, uint256 _withdrawalFee, address _feeRecipient)
+    external
+    returns (bool);
 
   /**
    * @dev rebase the total pooled DAI, user balance and total supply of LSDAI.
@@ -87,6 +122,11 @@ interface ILSDai is IERC20 {
    * is pegged to the total amount of DAI controlled by the protocol.
    */
   function totalSupply() external view returns (uint256);
+
+  /**
+   * @return the amount of total LSDAI shares
+   */
+  function totalShares() external view returns (uint256);
 
   ////////////////////////////////////////
   // User functions //////////////////////
