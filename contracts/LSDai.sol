@@ -32,6 +32,7 @@ contract LSDai is Ownable, ILSDai {
   error LSDai__MintToZeroAddress();
   error LSDai__BurnFromZeroAddress();
   error LSDai__SharesAmountExceedsBalance();
+  error LSDai__AmountExceedsBalance();
   error LSDai__FeeRecipientZeroAddress();
   error LSDai__RebaseOverflow(uint256 preRebaseTotalPooledDai, uint256 postRebaseTotalPooledDai);
 
@@ -395,6 +396,11 @@ contract LSDai is Ownable, ILSDai {
    * @param _withdrawFee The fee to be charged on the withdrawal, in basis points.
    */
   function _withdraw(uint256 _daiAmount, uint256 _withdrawFee) internal returns (bool) {
+    uint256 currentDaiBalance = balanceOf(msg.sender);
+    // Check if the user has enough LSDAI
+    if (_daiAmount > currentDaiBalance) {
+      revert LSDai__AmountExceedsBalance();
+    }
     uint256 chi = _getMostRecentChi();
 
     // Split the amount into the fee and the actual withdrawal
@@ -417,6 +423,9 @@ contract LSDai is Ownable, ILSDai {
     uint256 withdrawPotShares = RMath.rdivup(withdrawAmount, chi);
     // Reduce the total pot shares controlled by LSDAI
     _totalPotShares = _totalPotShares.sub(withdrawPotShares);
+
+    // Burn LSDAI at 1:1 ratio to DAI
+    emit Transfer(msg.sender, address(0), withdrawAmount);
 
     // Get back the DAI from the DSR to the contract
     pot.exit(withdrawPotShares);

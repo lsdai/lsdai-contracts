@@ -128,6 +128,7 @@ contract LSDaiTests is LSDAITestBase {
     // Submit withdrawal request
     vm.prank(lsdTripper);
     vm.expectEmit(address(lsdai));
+    emit Transfer(lsdTripper, address(0), expectedWithdrawAmount);
     // // Assert that lsd tripper shares are burnt
     emit SharesBurnt(lsdTripper, 899919999000000000000000, expectedPostRebaseTokenAmount, expectedSharesToBurn);
     lsdai.withdraw(testWithdrawAmount);
@@ -272,6 +273,15 @@ contract LSDaiTests is LSDAITestBase {
     }
 
     logLSDAIMetrics(lsdai, "after everyone withdrew");
+  }
+
+  function test_UserCannotExceedTheirBalanceOnWithdrawal() public {
+    depositDAI(lsdTripper, lsdTripperInitialDeposit);
+    assertEq(lsdai.balanceOf(lsdTripper), lsdTripperInitialDeposit, "LSD tripper should have initial deposit");
+    uint256 attemptToWithdrawByHacker = lsdai.balanceOf(lsdTripper) - 10 ether;
+    vm.startPrank(lsdEnjoyer);
+    vm.expectRevert(LSDai.LSDai__AmountExceedsBalance.selector);
+    lsdai.withdraw(attemptToWithdrawByHacker);
   }
 
   function test_depositCapEnforced() public {
