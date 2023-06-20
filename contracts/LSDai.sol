@@ -207,6 +207,7 @@ contract LSDai is Ownable, ILSDai {
     bytes32 permitS
   ) external returns (uint256) {
     dai.permit(msg.sender, address(this), permitNonce, permitExpiry, true, permitV, permitR, permitS);
+    dai.transferFrom(msg.sender, address(this), daiAmount);
     return _deposit(to, daiAmount);
   }
 
