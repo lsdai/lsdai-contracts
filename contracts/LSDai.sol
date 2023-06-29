@@ -3,6 +3,7 @@ pragma solidity 0.8.20;
 
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 // Custom Ownable logic from OZ
 import {Ownable} from "./Ownable.sol";
 
@@ -20,7 +21,7 @@ import {IVat} from "./interfaces/IVat.sol";
  * @title LSDAI
  * @dev LSDai is a rebasing token that earns interest on DAI deposited in the MakerDAO DSR.
  */
-contract LSDai is Ownable, ILSDai {
+contract LSDai is Ownable, AccessControl, ILSDai {
   error LSDai__AlreadyInitialized();
   error LSDai__DepositCapLowerThanTotalPooledDai();
   error LSDai__DepositCap();
@@ -35,6 +36,7 @@ contract LSDai is Ownable, ILSDai {
   error LSDai__AmountExceedsBalance();
   error LSDai__FeeRecipientZeroAddress();
   error LSDai__RebaseOverflow(uint256 preRebaseTotalPooledDai, uint256 postRebaseTotalPooledDai);
+  error LSDai__NotRebaser();
 
   using SafeMath for uint256;
   ///////////////////////////
@@ -115,6 +117,11 @@ contract LSDai is Ownable, ILSDai {
    */
   address public feeRecipient;
 
+  /**
+   * @dev LSDAI rebaser role. An address with this role can call `rebase()`.
+   */
+  bytes32 public constant REBASER_ROLE = keccak256("REBASER_ROLE");
+
   ///////////////////////////
   // MakerDAO DSR Contracts //
   ///////////////////////////
@@ -151,6 +158,10 @@ contract LSDai is Ownable, ILSDai {
     setFeeRecipient(_feeRecipient);
     setWithdrawalFee(_withdrawalFee);
     setInterestFee(_interestFee);
+
+    // Grant the contract deployer the default admin and rebaser roles
+    _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    _grantRole(REBASER_ROLE, msg.sender);
 
     _initialized = true;
 
@@ -270,6 +281,24 @@ contract LSDai is Ownable, ILSDai {
   }
 
   /**
+   * @notice Grants the REBASER_ROLE to an address.
+   * @dev This function grants the REBASER_ROLE to the specified address. Callable by the admin.
+   * @param rebaser The address to be granted the REBASER_ROLE.
+   */
+  function addRebaser(address rebaser) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    _grantRole(REBASER_ROLE, rebaser);
+  }
+
+  /**
+   * @notice Revokes the REBASER_ROLE from an address.
+   * @dev This function revokes the REBASER_ROLE from the specified address. Callable by the owner.
+   * @param rebaser The address to have the REBASER_ROLE revoked.
+   */
+  function removeRebaser(address rebaser) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    _revokeRole(REBASER_ROLE, rebaser);
+  }
+
+  /**
    * @return the amount of tokens owned by the `account`.
    *
    * @dev Balances are dynamic and equal the `account`'s share in the amount of the
@@ -319,9 +348,12 @@ contract LSDai is Ownable, ILSDai {
 
   /**
    * @dev rebase the total pooled DAI, user balance and total supply of LSDAI.
-   * Can only be called by anyone
+   * Can only be called by rebasers.
    */
   function rebase() external {
+    if (!hasRole(REBASER_ROLE, msg.sender)) {
+      revert LSDai__NotRebaser();
+    }
     uint256 chi = _getMostRecentChi();
     _rebase(chi, true);
   }
