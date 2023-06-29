@@ -52,6 +52,20 @@ interface ILSDai is IERC20 {
   event FeeRecipientSet(address indexed recipient);
 
   /**
+   * @notice Grants the REBASER_ROLE to an address.
+   * @dev This function grants the REBASER_ROLE to the specified address. Callable by the owner.
+   * @param rebaser The address to be granted the REBASER_ROLE.
+   */
+  function addRebaser(address rebaser) external;
+
+  /**
+   * @notice Revokes the REBASER_ROLE from an address.
+   * @dev This function revokes the REBASER_ROLE from the specified address. Callable by the owner.
+   * @param rebaser The address to have the REBASER_ROLE revoked.
+   */
+  function removeRebaser(address rebaser) external;
+
+  /**
    * @notice The DAI deposit cap.
    * @dev can be changed by the owner of the contract.
    */
