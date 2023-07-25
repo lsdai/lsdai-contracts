@@ -571,6 +571,49 @@ contract LSDai is Ownable, ILSDai {
   }
 
   /**
+   * @dev Atomically increases the allowance granted to `spender` by the caller.
+   *
+   * This is an alternative to {approve} that can be used as a mitigation for
+   * problems described in {IERC20-approve}.
+   *
+   * Emits an {Approval} event indicating the updated allowance.
+   *
+   * Requirements:
+   *
+   * - `spender` cannot be the zero address.
+   */
+  function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+    address owner = msg.sender;
+    _approve(owner, spender, allowance(owner, spender) + addedValue);
+    return true;
+  }
+
+  /**
+   * @dev Atomically decreases the allowance granted to `spender` by the caller.
+   *
+   * This is an alternative to {approve} that can be used as a mitigation for
+   * problems described in {IERC20-approve}.
+   *
+   * Emits an {Approval} event indicating the updated allowance.
+   *
+   * Requirements:
+   *
+   * - `spender` cannot be the zero address.
+   * - `spender` must have allowance for the caller of at least
+   * `subtractedValue`.
+   */
+  function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+    address owner = msg.sender;
+    uint256 currentAllowance = allowance(owner, spender);
+    require(currentAllowance >= subtractedValue, "ERC20: decreased allowance below zero");
+    unchecked {
+      _approve(owner, spender, currentAllowance - subtractedValue);
+    }
+
+    return true;
+  }
+
+  /**
    * @notice Moves `_sharesAmount` token shares from the `_sender` account to the `_recipient` account.
    *
    * @return amount of transferred tokens.
