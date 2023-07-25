@@ -371,27 +371,24 @@ contract LSDaiTests is LSDAITestBase {
   }
 
   function test_setWithdrawalFee() public {
-    // Set withdrawal fee to 1%
-    lsdai.setWithdrawalFee(100);
-    assertEq(lsdai.withdrawalFee(), 100, 'Withdrawal fee should be 1%');
-    // Set withdrawal fee to 2%
-    lsdai.setWithdrawalFee(200);
-    assertEq(lsdai.withdrawalFee(), 200, 'Withdrawal fee should be 2%');
-    // Set withdrawal fee to 3%
-    lsdai.setWithdrawalFee(300);
-    assertEq(lsdai.withdrawalFee(), 300, 'Withdrawal fee should be 3%');
+    // Set withdrawal fee to 0.03%
+    lsdai.setWithdrawalFee(3);
+    assertEq(lsdai.withdrawalFee(), 3, 'Withdrawal fee should be 0.03%');
+    // Revert if the fee is greater than 0.05%
+    vm.expectRevert(LSDai.LSDai__WithdrawalFeeHigh.selector);
+    lsdai.setWithdrawalFee(6);
   }
 
   function test_setInterestFee() public {
     // Set interest fee to 1%
     lsdai.setInterestFee(100);
     assertEq(lsdai.interestFee(), 100, 'Interest fee should be 1%');
-    // Set interest fee to 2%
-    lsdai.setInterestFee(200);
-    assertEq(lsdai.interestFee(), 200, 'Interest fee should be 2%');
     // Set interest fee to 3%
     lsdai.setInterestFee(300);
     assertEq(lsdai.interestFee(), 300, 'Interest fee should be 3%');
+    // Revert on interest fee greater than 5%
+    vm.expectRevert(LSDai.LSDai__InterestFeeHigh.selector);
+    lsdai.setInterestFee(501);
   }
 
   function depositDAI(address account, uint256 daiAmount) public {

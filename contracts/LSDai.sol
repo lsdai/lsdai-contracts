@@ -24,8 +24,8 @@ contract LSDai is Ownable, ILSDai {
   error LSDai__AlreadyInitialized();
   error LSDai__DepositCapLowerThanTotalPooledDai();
   error LSDai__DepositCap();
-  error LSDai__WithdrawalFeeLow();
-  error LSDai__InterestFeeLow();
+  error LSDai__WithdrawalFeeHigh();
+  error LSDai__InterestFeeHigh();
   error LSDai__TransferToZeroAddress();
   error LSDai__TransferFromZeroAddress();
   error LSDai__TransferToLSDaiContract();
@@ -228,12 +228,13 @@ contract LSDai is Ownable, ILSDai {
   }
 
   /**
-   * @dev Updates the withdrawal fee. Only callable by the owner.
+   * @dev Updates the withdrawal fee, possible values between 0 and . Only callable by the owner.
    * @param fee The new withdrawal fee, in basis points.
    */
   function setWithdrawalFee(uint256 fee) public onlyOwner {
-    if (fee < 0) {
-      revert LSDai__WithdrawalFeeLow();
+    // Cap at 0.05% (5 basis points)
+    if (fee > 5) {
+      revert LSDai__WithdrawalFeeHigh();
     }
 
     withdrawalFee = fee;
@@ -246,8 +247,9 @@ contract LSDai is Ownable, ILSDai {
    * @param fee The new interest fee, in basis points.
    */
   function setInterestFee(uint256 fee) public onlyOwner {
-    if (fee < 0) {
-      revert LSDai__InterestFeeLow();
+    // Cap at 5% (500 basis points)
+    if (fee > 500) {
+      revert LSDai__InterestFeeHigh();
     }
 
     interestFee = fee;
