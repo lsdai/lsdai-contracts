@@ -4,25 +4,19 @@ import '@nomiclabs/hardhat-waffle';
 import '@typechain/hardhat';
 import 'hardhat-preprocessor';
 import 'hardhat-abi-exporter';
-
 import { config as dotenvConfig } from 'dotenv';
-
-import { readFileSync } from 'fs';
 import { HardhatUserConfig } from 'hardhat/config';
 import { HttpNetworkUserConfig } from 'hardhat/types';
 import { utils } from 'ethers';
 
 import './tasks/accounts';
-
-const remappings = readFileSync('remappings.txt', 'utf8')
-  .split('\n')
-  .filter(Boolean)
-  .map((line) => line.trim().split('='));
+import './tasks/deploy';
+import './tasks/upgrade';
 
 // Load environment variables.
 dotenvConfig();
 
-const { INFURA_KEY, MNEMONIC, PK, PRIVATE_KEY, REPORT_GAS, MOCHA_CONF, NODE_URL } = process.env;
+const { MNEMONIC, PK, PRIVATE_KEY, ETHER_SCAN_API_KEY } = process.env;
 
 const DEFAULT_MNEMONIC = 'candy maple cake sugar pudding cream honey rich smooth crumble sweet treat';
 
@@ -43,10 +37,9 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      initialBaseFeePerGas: 0,
-      chainId: 100,
+      chainId: 1,
       forking: {
-        url: 'https://rpc.gnosischain.com/',
+        url: 'https://eth.llamarpc.com/',
         enabled: true,
       },
       accounts: [
@@ -55,6 +48,11 @@ const config: HardhatUserConfig = {
           balance: utils.parseEther('10000').toString(),
         },
       ],
+    },
+    ethereum: {
+      ...sharedNetworkConfig,
+      url: 'https://rpc.mevblocker.io',
+      chainId: 1,
     },
     arbitrum: {
       chainId: 42161,
@@ -66,19 +64,9 @@ const config: HardhatUserConfig = {
       url: 'https://goerli-rollup.arbitrum.io/rpc',
       accounts: [process.env.PRIVATE_KEY!],
     },
-    gnosis: {
-      chainId: 100,
-      url: 'https://rpc.gnosischain.com/',
-      accounts: [process.env.GNOSIS_PRIVATE_KEY!],
-    },
-    gnosisFork: {
-      chainId: 100,
-      url: 'http://localhost:100',
-      accounts: [process.env.PRIVATE_KEY!],
-    },
   },
   solidity: {
-    version: '0.8.13',
+    version: '0.8.20',
     settings: {
       optimizer: {
         enabled: true,
@@ -86,33 +74,17 @@ const config: HardhatUserConfig = {
       },
     },
   },
-  // This fully resolves paths for imports in the ./lib directory for Hardhat
-  preprocess: {
-    eachLine: (hre) => ({
-      transform: (line: string) => {
-        if (!line.match(/^\s*import /i)) {
-          return line;
-        }
-
-        const remapping = remappings.find(([find]) => line.match('"' + find));
-        if (!remapping) {
-          return line;
-        }
-
-        const [find, replace] = remapping;
-        return line.replace('"' + find, '"' + replace);
-      },
-    }),
-  },
   etherscan: {
-    apiKey: {},
+    apiKey: {
+      mainnet: ETHER_SCAN_API_KEY!,
+    },
   },
   abiExporter: {
     format: 'json',
     flat: true,
     filter(abiElement, index, abi, fullyQualifiedName) {
       const contractName = fullyQualifiedName.split(':')[1];
-      return ['ERC20', 'LSDAI'].includes(contractName);
+      return ['LSDai'].includes(contractName);
     },
   },
 };
