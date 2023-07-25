@@ -103,12 +103,12 @@ contract LSDai is Ownable, ILSDai {
   /**
    * @notice Interest fee taken on interest earned, in basis points.
    */
-  uint256 public interestFee = 250; // 2.5%
+  uint256 public interestFee;
 
   /**
    * @notice Withdrawal fee taken on exit, in basis points.
    */
-  uint256 public withdrawalFee = 1; // 0.01%
+  uint256 public withdrawalFee;
 
   /**
    * @notice Fee recipient address.
