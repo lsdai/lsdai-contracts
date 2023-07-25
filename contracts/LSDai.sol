@@ -22,7 +22,6 @@ import {IVat} from "./interfaces/IVat.sol";
  */
 contract LSDai is Ownable, ILSDai {
   error LSDai__AlreadyInitialized();
-  error LSDai__DepositCapLowerThanTotalPooledDai();
   error LSDai__DepositCap();
   error LSDai__WithdrawalFeeHigh();
   error LSDai__InterestFeeHigh();
@@ -341,11 +340,6 @@ contract LSDai is Ownable, ILSDai {
    * @notice Sets deposit cap. Exclusive for the owner.
    */
   function setDepositCap(uint256 cap) public onlyOwner {
-    // Must be higher than total pooled DAI
-    if (cap < _getTotalPooledDai()) {
-      revert LSDai__DepositCapLowerThanTotalPooledDai();
-    }
-
     depositCap = cap;
 
     emit DepositCapSet(cap);
