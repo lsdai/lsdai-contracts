@@ -171,7 +171,7 @@ contract LSDai is Ownable, ILSDai {
   /**
    * @dev returns the amount of pot shares the LSDAI contract has in the DSR pot contract
    */
-  function potShares() public view returns (uint256) {
+  function potShares() external view returns (uint256) {
     return pot.pie(address(this));
   }
 
