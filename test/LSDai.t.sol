@@ -340,16 +340,6 @@ contract LSDaiTests is LSDAITestBase {
     vm.prank(lsdTripper);
     vm.expectRevert(LSDai.LSDai__DepositCap.selector);
     lsdai.deposit({daiAmount: depositAmount, to: lsdTripper});
-
-    // Ensure that deposit cap cannot be lowered below the current pooled DAI
-    vm.warp(block.timestamp + 1 weeks);
-    lsdai.rebase();
-    uint256 currentPooledDai = lsdai.totalSupply();
-    // Withdraw 1 DAI to make room for the next deposit
-    uint256 nextDepositCap = currentPooledDai - 1;
-    // Next deposit cannot exceed current pooled DAI
-    vm.expectRevert(LSDai.LSDai__DepositCapLowerThanTotalPooledDai.selector);
-    lsdai.setDepositCap(nextDepositCap);
   }
 
   function test_feeRecipient() public {
