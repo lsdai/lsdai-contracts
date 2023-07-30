@@ -217,14 +217,23 @@ contract LSDai is Ownable, ILSDai {
    * @param daiAmount The amount of LSDAI to withdraw. wad is denominated in dai
    */
   function withdraw(uint256 daiAmount) external returns (bool) {
-    return _withdraw(daiAmount, withdrawalFee);
+    return _withdraw(msg.sender, msg.sender, daiAmount, withdrawalFee);
   }
 
   /**
-   * @dev withdraws the pending protocol fees from the DSR pot to the owner. Only callable by the owner.
+   * Withdraw DAI from the contract to a specified address instead of the sender
+   * @param to The address to withdraw LSDAI to.
+   * @param daiAmount The amount of LSDAI to withdraw. wad is denominated in dai
+   */
+  function withdrawTo(address to, uint256 daiAmount) external returns (bool) {
+    return _withdraw(msg.sender, to, daiAmount, withdrawalFee);
+  }
+
+  /**
+   * @dev withdraws the pending protocol fees from the DSR pot to the `feeRecipient`. Only callable by the owner.
    */
   function collectFees() external onlyOwner returns (bool) {
-    return _withdraw(balanceOf(feeRecipient), 0);
+    return _withdraw(feeRecipient, feeRecipient, balanceOf(feeRecipient), 0);
   }
 
   /**
@@ -392,11 +401,13 @@ contract LSDai is Ownable, ILSDai {
 
   /**
    * Withdraw shares back to DAI
+   * @param _from The address to withdraw LSDAI from.
+   * @param _to The address to withdraw DAI to.
    * @param _daiAmount The amount of LSDAI to withdraw. wad is denominated in (1/chi) * dai
    * @param _withdrawFee The fee to be charged on the withdrawal, in basis points.
    */
-  function _withdraw(uint256 _daiAmount, uint256 _withdrawFee) internal returns (bool) {
-    uint256 currentDaiBalance = balanceOf(msg.sender);
+  function _withdraw(address _from, address _to, uint256 _daiAmount, uint256 _withdrawFee) internal returns (bool) {
+    uint256 currentDaiBalance = balanceOf(_from);
     // Check if the user has enough LSDAI
     if (_daiAmount > currentDaiBalance) {
       revert LSDai__AmountExceedsBalance();
@@ -416,8 +427,8 @@ contract LSDai is Ownable, ILSDai {
     // Decrease the total amount of DAI pooled
     _totalPooledDai = _totalPooledDai.sub(withdrawAmount);
 
-    _transferShares(msg.sender, feeRecipient, feeShares);
-    _burnShares(msg.sender, withdrawShares);
+    _transferShares(_from, feeRecipient, feeShares);
+    _burnShares(_from, withdrawShares);
 
     // Withdraw from the DSR, roudning up ensures we get at least the amount of DAI requested
     uint256 withdrawPotShares = RMath.rdivup(withdrawAmount, chi);
@@ -425,16 +436,15 @@ contract LSDai is Ownable, ILSDai {
     _totalPotShares = _totalPotShares.sub(withdrawPotShares);
 
     // Burn LSDAI at 1:1 ratio to DAI
-    emit Transfer(msg.sender, address(0), withdrawAmount);
+    emit Transfer(_from, address(0), withdrawAmount);
 
     // Get back the DAI from the DSR to the contract
     pot.exit(withdrawPotShares);
 
-    //  daiJoin.exit(msg.sender, rmul(chi, wad)); // wad is in dai units
     daiJoin.exit(address(this), withdrawAmount); // wad is in dai units
 
     // Send it over
-    return dai.transfer(msg.sender, withdrawAmount);
+    return dai.transfer(_to, withdrawAmount);
   }
 
   /**
