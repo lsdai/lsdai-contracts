@@ -230,7 +230,7 @@ contract LSDai is Ownable, ILSDai {
   }
 
   /**
-   * @dev withdraws the pending protocol fees from the DSR pot to the owner. Only callable by the owner.
+   * @dev withdraws the pending protocol fees from the DSR pot to the `feeRecipient`. Only callable by the owner.
    */
   function collectFees() external onlyOwner returns (bool) {
     return _withdraw(feeRecipient, feeRecipient, balanceOf(feeRecipient), 0);
