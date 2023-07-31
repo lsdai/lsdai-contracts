@@ -361,7 +361,7 @@ contract LSDaiTests is LSDAITestBase {
     assertEq(lsdai.withdrawalFee(), 3, 'Withdrawal fee should be 0.03%');
     // Revert if the fee is greater than 1%
     vm.expectRevert(LSDai.LSDai__WithdrawalFeeHigh.selector);
-    lsdai.setWithdrawalFee(101); // 1.01%
+    lsdai.setWithdrawalFee(21); // 0.21%
   }
 
   function test_setInterestFee() public {

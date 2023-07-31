@@ -236,12 +236,11 @@ contract LSDai is Ownable, ILSDai {
   }
 
   /**
-   * @dev Updates the withdrawal fee, possible values between 0 and 1%. Only callable by the owner.
+   * @dev Updates the withdrawal fee, possible values between 0 and 0.2%. Only callable by the owner.
    * @param fee The new withdrawal fee, in basis points.
    */
   function setWithdrawalFee(uint256 fee) public onlyOwner {
-    // Cap at 1% (100 basis points)
-    if (fee > 100) {
+    if (fee > 20) {
       revert LSDai__WithdrawalFeeHigh();
     }
 
