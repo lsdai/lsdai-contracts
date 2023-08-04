@@ -1,7 +1,14 @@
 import { task, types } from 'hardhat/config';
-import { utils } from 'ethers';
+import { BigNumberish, utils } from 'ethers';
 import { HardhatEthersHelpers } from 'hardhat/types';
 import { cancelPrompt } from './utils';
+
+const DEFAULT_INITIALIZE_ARGS: LSDaiInitializeArgs = {
+  depositCap: utils.parseEther((0.0001).toString()),
+  interestFee: 250,
+  withdrawalFee: 1,
+  feeRecipient: '0x000000000000000000000000000000000000dead',
+};
 
 /**
  * Deploys contracts
@@ -11,6 +18,54 @@ import { cancelPrompt } from './utils';
  * - Does not initialize LSDai instance
  */
 task('deploy', 'Deploy contracts')
+  .addParam('feeRecipient', 'Address of the fee recipient', '', types.string)
+  .setAction(async function (
+    taskArgs: {
+      feeRecipient: string;
+    },
+    { ethers }
+  ) {
+    const { feeRecipient } = taskArgs;
+
+    if (!feeRecipient || utils.isAddress(feeRecipient) === false) {
+      throw new Error('A fee recipient must be specified');
+    }
+
+    let [deployer] = await ethers.getSigners();
+
+    const deployerAddress = await deployer.getAddress();
+
+    if (!deployerAddress) {
+      throw new Error('No deployer address found');
+    }
+
+    console.log('Deployer address:', deployerAddress);
+    console.log('Fee recipient address:', feeRecipient);
+
+    // give user 10 seconds to cancel the transaction
+    await cancelPrompt(10);
+
+    const { lsdai } = await deployLSDaiImplementation({
+      ethers,
+      initializeArgs: {
+        depositCap: utils.parseEther((0).toString()), // 0 deposit cap, no limit
+        interestFee: 250,
+        withdrawalFee: 1,
+        feeRecipient,
+      },
+    });
+
+    await printLSDaiInfo(lsdai.address, ethers);
+  });
+
+/**
+ * Deploys contracts
+ * - Deploys LSDai instance
+ * - Deploys ProxyAdmin instance
+ * - Deploys TransparentUpgradeableProxy instance for LSDai
+ * - Does not initialize LSDai instance
+ */
+task('deploy:proxy', 'Deploy contracts')
   .addParam('proxyAdminOwner', 'Address of the proxy admin owner', '', types.string)
   .addParam('feeRecipient', 'Address of the fee recipient', '', types.string)
   .setAction(async function (
@@ -39,7 +94,8 @@ task('deploy', 'Deploy contracts')
     // give user 10 seconds to cancel the transaction
     await cancelPrompt(10);
 
-    const { lsdai } = await deployLSDaiImplementation(ethers);
+    // Deploy the LSDai implementation with dummy initialize args
+    const { lsdai } = await deployLSDaiImplementation({ ethers, initializeArgs: DEFAULT_INITIALIZE_ARGS });
 
     const { proxy: lsdaiProxy, proxyAdmin } = await deployProxy({
       implementationAddress: lsdai.address,
@@ -105,18 +161,35 @@ async function deployProxy({
   };
 }
 
+type LSDaiInitializeArgs = {
+  depositCap: BigNumberish;
+  interestFee: BigNumberish;
+  withdrawalFee: BigNumberish;
+  feeRecipient: string;
+};
+
 /**
  * Deploys LSDai implementation
- * @param ethers
+ * @param ethers ethers helper
+ * @param initializeArgs LSDai initialize args
  */
-async function deployLSDaiImplementation(ethers: HardhatEthersHelpers) {
+async function deployLSDaiImplementation({
+  ethers,
+  initializeArgs,
+}: {
+  ethers: HardhatEthersHelpers;
+  initializeArgs: LSDaiInitializeArgs;
+}) {
   const LSDai = await ethers.getContractFactory('LSDai');
 
   console.log(LSDai);
   console.log('Deploying LSDai implementation');
   const lsdai = await LSDai.deploy();
   console.log(`LSDai implementation deployed to: ${lsdai.address}`);
-  await lsdai.initialize(utils.parseEther((0.0001).toString()), 250, 1, '0x000000000000000000000000000000000000dead'); // 0x0 reverts
+
+  const { depositCap, interestFee, withdrawalFee, feeRecipient } = initializeArgs;
+
+  await lsdai.initialize(depositCap, interestFee, withdrawalFee, feeRecipient); // 0x0 reverts
   console.log('Initialized LSDai implementation');
   return { lsdai };
 }
